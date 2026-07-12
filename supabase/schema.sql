@@ -333,7 +333,11 @@ values
   ('10000000-0000-4000-8000-000000000002', 'Pantry', 2, true),
   ('10000000-0000-4000-8000-000000000003', 'Bakery', 3, true),
   ('10000000-0000-4000-8000-000000000004', 'Home', 4, true)
-on conflict (id) do nothing;
+on conflict (id) do update
+set
+  name = excluded.name,
+  sort_order = excluded.sort_order,
+  active = excluded.active;
 
 insert into public.store_settings (
   id,
@@ -343,7 +347,12 @@ insert into public.store_settings (
   minimum_order
 )
 values (1, 'USD', 2.50, 'Today, before dinner', 0)
-on conflict (id) do nothing;
+on conflict (id) do update
+set
+  currency = excluded.currency,
+  delivery_fee = excluded.delivery_fee,
+  delivery_message = excluded.delivery_message,
+  minimum_order = excluded.minimum_order;
 
 insert into public.products (
   id,
@@ -499,4 +508,18 @@ values
     false,
     true
   )
-on conflict (id) do nothing;
+on conflict (id) do update
+set
+  category_id = excluded.category_id,
+  slug = excluded.slug,
+  name = excluded.name,
+  description = excluded.description,
+  price = excluded.price,
+  unit = excluded.unit,
+  image_url = excluded.image_url,
+  rating = excluded.rating,
+  delivery_minutes = excluded.delivery_minutes,
+  tags = excluded.tags,
+  badge = excluded.badge,
+  featured = excluded.featured,
+  active = excluded.active;

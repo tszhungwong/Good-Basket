@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Pressable, Text, View } from 'react-native';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/data/mock_catalog';
+import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
 
 import { CatalogProvider, useCatalog } from './CatalogProvider';
 import type { CatalogRepository } from './catalogRepository';

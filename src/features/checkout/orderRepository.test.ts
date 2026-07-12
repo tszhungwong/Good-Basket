@@ -1,10 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/data/mock_catalog';
+import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
 import type { CatalogData } from '@/features/catalog/catalogTypes';
 
-import { createOrderRepository, LOCAL_ORDERS_KEY } from './orderRepository';
-import type { OrderRequest, OrderStorage } from './checkoutTypes';
+import { createOrderRepository } from './orderRepository';
+import type { OrderRequest } from './checkoutTypes';
 
 const catalog: CatalogData = {
   categories: mockCategories,
@@ -26,54 +26,12 @@ const request: OrderRequest = {
   ],
 };
 
-function createMemoryStorage(): OrderStorage & { values: Map<string, string> } {
-  const values = new Map<string, string>();
+test('requires a Supabase client instead of persisting a local order', async () => {
+  const repository = createOrderRepository(null);
 
-  return {
-    values,
-    getItem: jest.fn(async (key) => values.get(key) ?? null),
-    setItem: jest.fn(async (key, value) => {
-      values.set(key, value);
-    }),
-  };
-}
-
-test('calculates and persists a local order from current catalog data', async () => {
-  const storage = createMemoryStorage();
-  const repository = createOrderRepository(null, storage);
-  const result = await repository.createOrder(request, catalog);
-
-  expect(result).toMatchObject({
-    subtotal: 16.25,
-    deliveryFee: 2.5,
-    total: 18.75,
-    currency: 'USD',
-  });
-  expect(result.orderNumber).toMatch(/^GG-\d{8}-[A-Z0-9]{4}$/);
-  expect(JSON.parse(storage.values.get(LOCAL_ORDERS_KEY) ?? '[]')).toEqual([
-    expect.objectContaining({ orderNumber: result.orderNumber, request }),
-  ]);
-});
-
-test('rejects missing products and quantities above stock', async () => {
-  const repository = createOrderRepository(null, createMemoryStorage());
-
-  await expect(
-    repository.createOrder(
-      { ...request, items: [{ productId: 'missing', quantity: 1 }] },
-      catalog,
-    ),
-  ).rejects.toThrow('One or more products are unavailable.');
-
-  await expect(
-    repository.createOrder(
-      {
-        ...request,
-        items: [{ productId: mockProducts[1].id, quantity: mockProducts[1].stock + 1 }],
-      },
-      catalog,
-    ),
-  ).rejects.toThrow('One or more products are unavailable.');
+  await expect(repository.createOrder(request, catalog)).rejects.toThrow(
+    'Supabase is not configured.',
+  );
 });
 
 test('maps order requests and responses through the Supabase RPC', async () => {
@@ -91,7 +49,7 @@ test('maps order requests and responses through the Supabase RPC', async () => {
     error: null,
   });
   const client = { rpc } as unknown as SupabaseClient;
-  const repository = createOrderRepository(client, createMemoryStorage());
+  const repository = createOrderRepository(client);
 
   await expect(repository.createOrder(request, catalog)).resolves.toEqual({
     id: 'order-1',

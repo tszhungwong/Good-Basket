@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { mockCategories, mockProducts } from '@/data/mock_catalog';
+import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
 
 const readSchema = (name: string) =>
   readFileSync(resolve(process.cwd(), 'supabase', name), 'utf8').toLocaleLowerCase();
@@ -18,14 +18,21 @@ test('focused schema contains the catalog, order, security, and RPC contracts', 
   expect(schema).toContain('enable row level security');
   expect(schema).toContain('grant execute on function public.create_order');
   expect(schema).not.toContain('create table if not exists public.profiles');
-  expect(schema.match(/on conflict \(id\) do nothing;/g)).toHaveLength(3);
+  expect(schema.match(/on conflict \(id\) do update/g)).toHaveLength(3);
   expect(schema).not.toContain('stock = excluded.stock');
+  expect(schema).toContain(`'${mockStoreSettings.currency.toLocaleLowerCase()}'`);
+  expect(schema).toContain(mockStoreSettings.deliveryFee.toFixed(2));
+  expect(schema).toContain(`'${mockStoreSettings.deliveryMessage.toLocaleLowerCase()}'`);
+  expect(schema).toContain(mockStoreSettings.minimumOrder.toFixed(0));
 
   for (const category of mockCategories) {
     expect(schema).toContain(category.id);
+    expect(schema).toContain(`'${category.name.toLocaleLowerCase()}'`);
   }
   for (const product of mockProducts) {
     expect(schema).toContain(product.id);
+    expect(schema).toContain(`'${product.slug}'`);
+    expect(schema).toContain(`'${product.name.toLocaleLowerCase()}'`);
   }
 });
 

@@ -5,6 +5,8 @@ coverage/
 .env
 .env.*
 !.env.example
+.agents/*
+skills-lock.json
 npm-debug.log*
 .DS_Store
 

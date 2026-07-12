@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { mockCategories } from '@/data/mock_catalog';
+import { mockCategories } from '@/test/mock_catalog';
 
 import { CategoryFilter } from './CategoryFilter';
 
