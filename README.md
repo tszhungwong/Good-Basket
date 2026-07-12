@@ -28,18 +28,15 @@ The app requires Supabase environment values. The cart is stored locally under `
 ## Supabase Mode
 
 1. Apply `supabase/schema.sql` to a Supabase project.
-2. Create `.env` from `.env.example`.
-3. Set the project URL and publishable key.
-4. Restart Expo so public environment values are bundled.
+2. Create a local `.env` file with the project URL and publishable key.
+3. Restart Expo so public environment values are bundled.
 
 ```dotenv
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-When both values exist, the screens use Supabase for catalog reads and the transactional `create_order` RPC. Missing configuration or runtime database failures are shown to the customer and do not silently switch to mock data.
-
-Do not apply `supabase/future_features_schema.sql` yet. It is a separate extension for deferred authentication and seller-management features.
+When both values exist, the screens use Supabase for catalog reads and the transactional `create_order` RPC. Missing configuration or runtime database failures are shown to the customer and do not silently switch to fallback catalog data.
 
 ## Quality Commands
 
@@ -61,8 +58,6 @@ src/features/checkout/       Validation, order repositories, and checkout screen
 src/lib/                     Environment, formatting, and Supabase client helpers
 src/theme/                   Semantic visual tokens
 supabase/schema.sql          Focused-v1 database and seed data
-supabase/future_features_schema.sql
-                             Deferred auth/admin database extension
 docs/                        Design, architecture, and backend setup notes
 ```
 

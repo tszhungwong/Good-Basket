@@ -1,15 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
+import { catalogCategories, catalogProducts, catalogSettings } from '@/test/catalogFixtures';
 import type { CatalogData } from '@/features/catalog/catalogTypes';
 
 import { createOrderRepository } from './orderRepository';
 import type { OrderRequest } from './checkoutTypes';
 
 const catalog: CatalogData = {
-  categories: mockCategories,
-  products: mockProducts,
-  settings: mockStoreSettings,
+  categories: catalogCategories,
+  products: catalogProducts,
+  settings: catalogSettings,
 };
 
 const request: OrderRequest = {
@@ -21,8 +21,8 @@ const request: OrderRequest = {
     note: '',
   },
   items: [
-    { productId: mockProducts[1].id, quantity: 2 },
-    { productId: mockProducts[5].id, quantity: 1 },
+    { productId: catalogProducts[1].id, quantity: 2 },
+    { productId: catalogProducts[2].id, quantity: 1 },
   ],
 };
 
@@ -66,8 +66,8 @@ test('maps order requests and responses through the Supabase RPC', async () => {
     p_address: '1 Market Road',
     p_note: '',
     p_items: [
-      { product_id: mockProducts[1].id, quantity: 2 },
-      { product_id: mockProducts[5].id, quantity: 1 },
+      { product_id: catalogProducts[1].id, quantity: 2 },
+      { product_id: catalogProducts[2].id, quantity: 1 },
     ],
   });
 });

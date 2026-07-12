@@ -1,13 +1,13 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { mockProducts } from '@/test/mock_catalog';
+import { catalogProducts } from '@/test/catalogFixtures';
 
 import { FeaturedProduct } from './FeaturedProduct';
 
 test('supports details and add actions for the featured product', async () => {
   const onAdd = jest.fn();
   const onPress = jest.fn();
-  const product = mockProducts[0];
+  const product = catalogProducts[0];
   const screen = await render(
     <FeaturedProduct currency="USD" onAdd={onAdd} onPress={onPress} product={product} />,
   );

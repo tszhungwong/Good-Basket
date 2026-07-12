@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
+import { catalogCategories, catalogProducts, catalogSettings } from '@/test/catalogFixtures';
 import { CatalogProvider } from '@/features/catalog/CatalogProvider';
 import type { CatalogRepository } from '@/features/catalog/catalogRepository';
 
@@ -25,7 +25,7 @@ const metrics = {
 };
 
 const renderCart = async () => {
-  const product = mockProducts[1];
+  const product = catalogProducts[1];
   const storage: CartStorage = {
     load: jest.fn().mockResolvedValue([
       {
@@ -42,9 +42,9 @@ const renderCart = async () => {
   };
   const repository: CatalogRepository = {
     getCatalog: jest.fn().mockResolvedValue({
-      categories: mockCategories,
-      products: mockProducts,
-      settings: mockStoreSettings,
+      categories: catalogCategories,
+      products: catalogProducts,
+      settings: catalogSettings,
     }),
   };
 

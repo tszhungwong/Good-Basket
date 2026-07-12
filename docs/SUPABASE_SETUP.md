@@ -64,24 +64,6 @@ After applying the schema:
 5. Confirm one order and its item snapshots exist.
 6. Confirm ordered product stock decreased by the submitted quantity.
 
-## Future Features
-
-`supabase/future_features_schema.sql` is deliberately separate. It depends on the focused schema and adds structures for:
-
-- Supabase Auth profiles and customer/seller/admin roles
-- saved delivery addresses
-- product variants
-- inventory movement history
-- order-status history
-- customer-owned order reads
-- seller management policies
-
-Authenticated orders are linked to the current profile by an insert trigger, which makes customer-owned order reads work without changing the v1 order RPC. Only an admin profile can assign or change roles. Sellers can read saved addresses for fulfillment, but only customers can change their own saved addresses.
-
-Do not apply the future schema until authentication and seller-management application features are implemented and tested. Applying it early would expose unused policy and role surfaces that the focused app cannot manage.
-
-The future schema never inserts Auth users. User creation must remain in Supabase Auth.
-
 ## Security References
 
 - [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)

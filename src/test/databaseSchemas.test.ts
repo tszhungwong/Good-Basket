@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
+import { catalogCategories, catalogProducts, catalogSettings } from '@/test/catalogFixtures';
 
 const readSchema = (name: string) =>
   readFileSync(resolve(process.cwd(), 'supabase', name), 'utf8').toLocaleLowerCase();
@@ -20,50 +20,24 @@ test('focused schema contains the catalog, order, security, and RPC contracts', 
   expect(schema).not.toContain('create table if not exists public.profiles');
   expect(schema.match(/on conflict \(id\) do update/g)).toHaveLength(3);
   expect(schema).not.toContain('stock = excluded.stock');
-  expect(schema).toContain(`'${mockStoreSettings.currency.toLocaleLowerCase()}'`);
-  expect(schema).toContain(mockStoreSettings.deliveryFee.toFixed(2));
-  expect(schema).toContain(`'${mockStoreSettings.deliveryMessage.toLocaleLowerCase()}'`);
-  expect(schema).toContain(mockStoreSettings.minimumOrder.toFixed(0));
+  expect(schema).toContain(`'${catalogSettings.currency.toLocaleLowerCase()}'`);
+  expect(schema).toContain(catalogSettings.deliveryFee.toFixed(2));
+  expect(schema).toContain(`'${catalogSettings.deliveryMessage.toLocaleLowerCase()}'`);
+  expect(schema).toContain(catalogSettings.minimumOrder.toFixed(0));
 
-  for (const category of mockCategories) {
+  for (const category of catalogCategories) {
     expect(schema).toContain(category.id);
     expect(schema).toContain(`'${category.name.toLocaleLowerCase()}'`);
   }
-  for (const product of mockProducts) {
+  for (const product of catalogProducts) {
     expect(schema).toContain(product.id);
     expect(schema).toContain(`'${product.slug}'`);
     expect(schema).toContain(`'${product.name.toLocaleLowerCase()}'`);
   }
 });
 
-test('future schema is one explicit extension for deferred auth and seller features', () => {
-  const schema = readSchema('future_features_schema.sql');
-
-  expect(schema).toContain('apply supabase/schema.sql first');
-  for (const table of [
-    'profiles',
-    'saved_addresses',
-    'product_variants',
-    'inventory_movements',
-    'order_status_history',
-  ]) {
-    expect(schema).toContain(`create table if not exists public.${table}`);
-  }
-
-  expect(schema).toContain('auth.uid()');
-  expect(schema).toContain('create or replace function public.is_admin');
-  expect(schema).toContain('create or replace function public.attach_order_customer');
-  expect(schema).toContain('create trigger orders_attach_customer');
-  expect(schema).toContain('create policy profiles_manage_admin');
-  expect(schema).toContain('create policy saved_addresses_read_seller');
-  expect(schema).not.toContain('create policy profiles_manage_seller');
-  expect(schema).not.toContain('user_id = auth.uid() or public.is_seller()');
-  expect(schema).not.toContain('grant usage on all sequences');
-  expect(schema).not.toContain('insert into auth.users');
-});
-
 test('schema files contain no unfinished implementation markers', () => {
-  const combined = `${readSchema('schema.sql')}\n${readSchema('future_features_schema.sql')}`;
+  const combined = readSchema('schema.sql');
 
   expect(combined).not.toMatch(/\btodo\b|\btbd\b|implement later|placeholder/);
 });

@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
+import { catalogCategories, catalogProducts, catalogSettings } from '@/test/catalogFixtures';
 import { CartProvider } from '@/features/cart/CartProvider';
 import type { CartStorage } from '@/features/cart/cartStorage';
 import { CatalogProvider } from '@/features/catalog/CatalogProvider';
@@ -26,7 +26,7 @@ const metrics = {
 };
 
 test('validates fields and submits one normalized order', async () => {
-  const product = mockProducts[1];
+  const product = catalogProducts[1];
   const storage: CartStorage = {
     load: jest.fn().mockResolvedValue([
       {
@@ -43,9 +43,9 @@ test('validates fields and submits one normalized order', async () => {
   };
   const catalogRepository: CatalogRepository = {
     getCatalog: jest.fn().mockResolvedValue({
-      categories: mockCategories,
-      products: mockProducts,
-      settings: mockStoreSettings,
+      categories: catalogCategories,
+      products: catalogProducts,
+      settings: catalogSettings,
     }),
   };
   const orderRepository: OrderRepository = {
@@ -84,7 +84,7 @@ test('validates fields and submits one normalized order', async () => {
       customer: expect.objectContaining({ fullName: 'Ari Lee', phone: '0912345678' }),
       items: [{ productId: product.id, quantity: 1 }],
     }),
-    expect.objectContaining({ products: mockProducts }),
+    expect.objectContaining({ products: catalogProducts }),
   );
   expect(mockRouter.replace).toHaveBeenCalled();
 });

@@ -1,15 +1,15 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { Pressable, Text, View } from 'react-native';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
+import { catalogCategories, catalogProducts, catalogSettings } from '@/test/catalogFixtures';
 
 import { CatalogProvider, useCatalog } from './CatalogProvider';
 import type { CatalogRepository } from './catalogRepository';
 
 const catalog = {
-  categories: mockCategories,
-  products: mockProducts,
-  settings: mockStoreSettings,
+  categories: catalogCategories,
+  products: catalogProducts,
+  settings: catalogSettings,
 };
 
 function CatalogConsumer() {
