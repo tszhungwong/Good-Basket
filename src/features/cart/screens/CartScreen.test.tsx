@@ -24,7 +24,7 @@ const metrics = {
   insets: { top: 24, left: 0, right: 0, bottom: 20 },
 };
 
-test('removes the final quantity and shows the empty cart state', async () => {
+const renderCart = async () => {
   const product = mockProducts[1];
   const storage: CartStorage = {
     load: jest.fn().mockResolvedValue([
@@ -47,18 +47,38 @@ test('removes the final quantity and shows the empty cart state', async () => {
       settings: mockStoreSettings,
     }),
   };
-  const screen = await render(
-    <SafeAreaProvider initialMetrics={metrics}>
-      <CatalogProvider repository={repository}>
-        <CartProvider storage={storage}>
-          <CartScreen />
-        </CartProvider>
-      </CatalogProvider>
-    </SafeAreaProvider>,
-  );
+
+  return {
+    product,
+    screen: await render(
+      <SafeAreaProvider initialMetrics={metrics}>
+        <CatalogProvider repository={repository}>
+          <CartProvider storage={storage}>
+            <CartScreen />
+          </CartProvider>
+        </CatalogProvider>
+      </SafeAreaProvider>,
+    ),
+  };
+};
+
+test('removes the final quantity and shows the empty cart state', async () => {
+  const { product, screen } = await renderCart();
 
   expect(await screen.findByText(product.name)).toBeTruthy();
   await fireEvent.press(screen.getByRole('button', { name: `Remove ${product.name}` }));
+
+  expect(await screen.findByText('Your cart is empty')).toBeTruthy();
+});
+
+test('clears the cart after in-app confirmation', async () => {
+  const { product, screen } = await renderCart();
+
+  expect(await screen.findByText(product.name)).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Clear cart' }));
+
+  expect(screen.getByText('Remove every item from your cart?')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Confirm clear cart' }));
 
   expect(await screen.findByText('Your cart is empty')).toBeTruthy();
 });

@@ -16,5 +16,4 @@ export const colors = {
   danger: '#B42318',
   disabled: '#A8B1AA',
   scrim: 'rgba(17, 24, 21, 0.52)',
-  shadow: '#111815',
 } as const;

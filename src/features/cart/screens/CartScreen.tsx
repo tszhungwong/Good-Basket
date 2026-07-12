@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
@@ -17,6 +18,7 @@ import { CartItemRow } from '../components/CartItemRow';
 
 export function CartScreen() {
   const router = useRouter();
+  const [clearConfirmationOpen, setClearConfirmationOpen] = useState(false);
   const { data, error, loading, retry } = useCatalog();
   const {
     clearCart,
@@ -57,10 +59,8 @@ export function CartScreen() {
   const total = subtotal + deliveryFee;
 
   const confirmClear = () => {
-    Alert.alert('Clear your cart?', 'Every product will be removed.', [
-      { style: 'cancel', text: 'Cancel' },
-      { onPress: clearCart, style: 'destructive', text: 'Clear cart' },
-    ]);
+    clearCart();
+    setClearConfirmationOpen(false);
   };
 
   return (
@@ -75,13 +75,32 @@ export function CartScreen() {
           <IconButton
             accessibilityLabel="Clear cart"
             icon="trash-outline"
-            onPress={confirmClear}
+            onPress={() => setClearConfirmationOpen(true)}
             tone="danger"
           />
         ) : (
           <View style={styles.headerSpacer} />
         )}
       </View>
+
+      {clearConfirmationOpen && items.length > 0 ? (
+        <View accessibilityRole="alert" style={styles.clearConfirmation}>
+          <Text style={styles.clearPrompt}>Remove every item from your cart?</Text>
+          <View style={styles.clearActions}>
+            <IconButton
+              accessibilityLabel="Cancel clear cart"
+              icon="close"
+              onPress={() => setClearConfirmationOpen(false)}
+            />
+            <IconButton
+              accessibilityLabel="Confirm clear cart"
+              icon="trash-outline"
+              onPress={confirmClear}
+              tone="danger"
+            />
+          </View>
+        </View>
+      ) : null}
 
       {items.length === 0 ? (
         <ScreenState
@@ -180,6 +199,28 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: layout.touchTarget,
+  },
+  clearConfirmation: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.accentSoft,
+  },
+  clearPrompt: {
+    minWidth: 0,
+    flex: 1,
+    color: colors.ink,
+    fontFamily: typography.fonts.bodySemibold,
+    fontSize: typography.sizes.small,
+    lineHeight: typography.lineHeights.small,
+  },
+  clearActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   content: {
     width: '100%',

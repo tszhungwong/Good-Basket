@@ -112,7 +112,7 @@ export const mockProducts: Product[] = [
     price: 7.25,
     unit: 'loaf',
     imageUrl:
-      'https://images.unsplash.com/photo-1585478259715-876acc5be8eb?auto=format&fit=crop&w=900&q=85',
+      'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=85',
     rating: 4.9,
     stock: 14,
     deliveryMinutes: 26,

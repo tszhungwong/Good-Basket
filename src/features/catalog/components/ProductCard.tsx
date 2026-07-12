@@ -92,11 +92,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: layout.radius,
     backgroundColor: colors.surface,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 2,
   },
   details: {
     flex: 1,
