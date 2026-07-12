@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/data/mock_catalog';
+import { mockCategories, mockProducts, mockStoreSettings } from '@/test/mock_catalog';
 import { CartProvider } from '@/features/cart/CartProvider';
 import type { CartStorage } from '@/features/cart/cartStorage';
 

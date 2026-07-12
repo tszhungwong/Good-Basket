@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import { mockProducts } from '@/data/mock_catalog';
+import { mockProducts } from '@/test/mock_catalog';
 
 import { FeaturedProduct } from './FeaturedProduct';
 

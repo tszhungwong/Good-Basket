@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { mockCategories, mockProducts, mockStoreSettings } from '@/data/mock_catalog';
 import { getSupabaseClient } from '@/lib/supabase';
 
 import type { CatalogData, Category, Product, StoreSettings } from './catalogTypes';
@@ -38,19 +37,6 @@ type StoreSettingsRow = {
   delivery_message: string;
   minimum_order: number | string;
 };
-
-function copyMockCatalog(): CatalogData {
-  return {
-    categories: mockCategories.map((category) => ({ ...category })),
-    products: mockProducts.map((product) => ({ ...product, tags: [...product.tags] })),
-    settings: { ...mockStoreSettings },
-  };
-}
-
-async function getMockCatalog(): Promise<CatalogData> {
-  await new Promise((resolve) => setTimeout(resolve, 60));
-  return copyMockCatalog();
-}
 
 async function getSupabaseCatalog(client: SupabaseClient): Promise<CatalogData> {
   const [categoryResult, productResult, settingsResult] = await Promise.all([
@@ -124,6 +110,12 @@ export function createCatalogRepository(
   client: SupabaseClient | null = getSupabaseClient(),
 ): CatalogRepository {
   return {
-    getCatalog: () => (client ? getSupabaseCatalog(client) : getMockCatalog()),
+    getCatalog: async () => {
+      if (!client) {
+        throw new Error('Supabase is not configured.');
+      }
+
+      return getSupabaseCatalog(client);
+    },
   };
 }
