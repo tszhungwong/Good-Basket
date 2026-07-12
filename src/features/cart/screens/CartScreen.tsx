@@ -106,7 +106,7 @@ export function CartScreen() {
         <ScreenState
           actionLabel="Start shopping"
           icon="bag-outline"
-          message="Add a few goods from the storefront and they will appear here."
+          message="Enjoy your shopping!"
           onRetry={() => router.replace('/')}
           title="Your cart is empty"
         />
