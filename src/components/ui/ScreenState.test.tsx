@@ -16,3 +16,19 @@ test('renders a retry action when recovery is available', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
+
+test('supports a context-specific recovery label', async () => {
+  const onAction = jest.fn();
+  const screen = await render(
+    <ScreenState
+      actionLabel="Start shopping"
+      icon="bag-outline"
+      message="Add a few goods from the storefront."
+      onRetry={onAction}
+      title="Your cart is empty"
+    />,
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Start shopping' }));
+  expect(onAction).toHaveBeenCalledTimes(1);
+});

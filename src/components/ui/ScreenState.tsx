@@ -9,13 +9,20 @@ import { typography } from '@/theme/typography';
 import { Button } from './Button';
 
 export type ScreenStateProps = {
+  actionLabel?: string;
   icon: ComponentProps<typeof Ionicons>['name'];
   message: string;
   onRetry?: () => void;
   title: string;
 };
 
-export function ScreenState({ icon, message, onRetry, title }: ScreenStateProps) {
+export function ScreenState({
+  actionLabel = 'Try again',
+  icon,
+  message,
+  onRetry,
+  title,
+}: ScreenStateProps) {
   return (
     <View accessibilityRole="summary" style={styles.container}>
       <View style={styles.iconWrap}>
@@ -23,7 +30,7 @@ export function ScreenState({ icon, message, onRetry, title }: ScreenStateProps)
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      {onRetry ? <Button label="Try again" onPress={onRetry} variant="outline" /> : null}
+      {onRetry ? <Button label={actionLabel} onPress={onRetry} variant="outline" /> : null}
     </View>
   );
 }
