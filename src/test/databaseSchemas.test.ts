@@ -9,15 +9,25 @@ const readSchema = (name: string) =>
 test('focused schema contains the catalog, order, security, and RPC contracts', () => {
   const schema = readSchema('schema.sql');
 
-  for (const table of ['categories', 'products', 'store_settings', 'orders', 'order_items']) {
+  for (const table of [
+    'categories',
+    'products',
+    'store_settings',
+    'orders',
+    'order_items',
+    'account_profiles',
+    'delivery_preferences',
+    'payment_methods',
+  ]) {
     expect(schema).toContain(`create table if not exists public.${table}`);
   }
 
   expect(schema).toContain('create or replace function public.create_order');
+  expect(schema).toContain('create or replace function public.get_account_overview');
   expect(schema).toContain('security definer');
   expect(schema).toContain('enable row level security');
   expect(schema).toContain('grant execute on function public.create_order');
-  expect(schema).not.toContain('create table if not exists public.profiles');
+  expect(schema).toContain('grant execute on function public.get_account_overview');
   expect(schema.match(/on conflict \(id\) do update/g)).toHaveLength(3);
   expect(schema).not.toContain('stock = excluded.stock');
   expect(schema).toContain(`'${catalogSettings.currency.toLocaleLowerCase()}'`);

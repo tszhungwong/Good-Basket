@@ -55,6 +55,34 @@ test('searches the catalog and adds a visible product to cart', async () => {
   expect(screen.getByRole('button', { name: /View cart, 1 item/ })).toBeTruthy();
 });
 
+test('opens the account page from the storefront header', async () => {
+  const repository: CatalogRepository = {
+    getCatalog: jest.fn().mockResolvedValue({
+      categories: catalogCategories,
+      products: catalogProducts,
+      settings: catalogSettings,
+    }),
+  };
+  const storage: CartStorage = {
+    load: jest.fn().mockResolvedValue([]),
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+  const screen = await render(
+    <SafeAreaProvider initialMetrics={metrics}>
+      <CatalogProvider repository={repository}>
+        <CartProvider storage={storage}>
+          <StorefrontScreen />
+        </CartProvider>
+      </CatalogProvider>
+    </SafeAreaProvider>,
+  );
+
+  await screen.findByText('Good Goods');
+  fireEvent.press(screen.getByRole('button', { name: 'Open account' }));
+
+  expect(mockRouter.push).toHaveBeenCalledWith('/account');
+});
+
 test('shows the retryable catalog error instead of a permanent loading state', async () => {
   const repository: CatalogRepository = {
     getCatalog: jest.fn().mockRejectedValue(new Error('Catalog is offline.')),

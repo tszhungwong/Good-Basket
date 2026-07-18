@@ -57,8 +57,40 @@ create table if not exists public.store_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.account_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null,
+  username text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.delivery_preferences (
+  user_id uuid primary key references public.account_profiles(user_id) on delete cascade,
+  default_address text not null,
+  preferred_window text not null,
+  delivery_instructions text not null,
+  substitution_preference text not null default 'Replace unavailable items',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.payment_methods (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.account_profiles(user_id) on delete cascade,
+  brand text not null,
+  last_four char(4) not null check (last_four ~ '^[0-9]{4}$'),
+  expiry_month integer not null check (expiry_month between 1 and 12),
+  expiry_year integer not null check (expiry_year >= extract(year from now())::integer),
+  billing_name text not null,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
   order_number text not null unique,
   customer_name text not null,
   phone text not null,
@@ -86,8 +118,16 @@ create table if not exists public.order_items (
   created_at timestamptz not null default now()
 );
 
+alter table public.orders
+add column if not exists user_id uuid references auth.users(id) on delete set null;
+
 create index if not exists products_category_id_idx on public.products(category_id);
 create index if not exists products_active_featured_idx on public.products(active, featured desc);
+create index if not exists payment_methods_user_id_idx on public.payment_methods(user_id);
+create unique index if not exists payment_methods_one_default_per_user_idx
+on public.payment_methods(user_id)
+where is_default;
+create index if not exists orders_user_id_created_at_idx on public.orders(user_id, created_at desc);
 create index if not exists orders_created_at_idx on public.orders(created_at desc);
 create index if not exists orders_status_idx on public.orders(status);
 create index if not exists order_items_order_id_idx on public.order_items(order_id);
@@ -118,6 +158,21 @@ create trigger store_settings_set_updated_at
 before update on public.store_settings
 for each row execute function public.set_updated_at();
 
+drop trigger if exists account_profiles_set_updated_at on public.account_profiles;
+create trigger account_profiles_set_updated_at
+before update on public.account_profiles
+for each row execute function public.set_updated_at();
+
+drop trigger if exists delivery_preferences_set_updated_at on public.delivery_preferences;
+create trigger delivery_preferences_set_updated_at
+before update on public.delivery_preferences
+for each row execute function public.set_updated_at();
+
+drop trigger if exists payment_methods_set_updated_at on public.payment_methods;
+create trigger payment_methods_set_updated_at
+before update on public.payment_methods
+for each row execute function public.set_updated_at();
+
 drop trigger if exists orders_set_updated_at on public.orders;
 create trigger orders_set_updated_at
 before update on public.orders
@@ -126,6 +181,9 @@ for each row execute function public.set_updated_at();
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.store_settings enable row level security;
+alter table public.account_profiles enable row level security;
+alter table public.delivery_preferences enable row level security;
+alter table public.payment_methods enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 
@@ -150,15 +208,82 @@ for select
 to anon, authenticated
 using (true);
 
+drop policy if exists account_profiles_owner_read on public.account_profiles;
+create policy account_profiles_owner_read
+on public.account_profiles
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists account_profiles_owner_insert on public.account_profiles;
+create policy account_profiles_owner_insert
+on public.account_profiles
+for insert
+to authenticated
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists account_profiles_owner_update on public.account_profiles;
+create policy account_profiles_owner_update
+on public.account_profiles
+for update
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists delivery_preferences_owner_manage on public.delivery_preferences;
+create policy delivery_preferences_owner_manage
+on public.delivery_preferences
+for all
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists payment_methods_owner_manage on public.payment_methods;
+create policy payment_methods_owner_manage
+on public.payment_methods
+for all
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists orders_owner_read on public.orders;
+create policy orders_owner_read
+on public.orders
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists order_items_owner_read on public.order_items;
+create policy order_items_owner_read
+on public.order_items
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.orders
+    where orders.id = order_items.order_id
+      and orders.user_id = (select auth.uid())
+  )
+);
+
 revoke all on table public.categories from anon, authenticated;
 revoke all on table public.products from anon, authenticated;
 revoke all on table public.store_settings from anon, authenticated;
+revoke all on table public.account_profiles from anon, authenticated;
+revoke all on table public.delivery_preferences from anon, authenticated;
+revoke all on table public.payment_methods from anon, authenticated;
 revoke all on table public.orders from anon, authenticated;
 revoke all on table public.order_items from anon, authenticated;
 
 grant select on table public.categories to anon, authenticated;
 grant select on table public.products to anon, authenticated;
 grant select on table public.store_settings to anon, authenticated;
+grant select, insert, update on table public.account_profiles to authenticated;
+grant select, insert, update, delete on table public.delivery_preferences to authenticated;
+grant select, insert, update, delete on table public.payment_methods to authenticated;
+grant select on table public.orders to authenticated;
+grant select on table public.order_items to authenticated;
 
 create or replace function public.create_order(
   p_customer_name text,
@@ -248,10 +373,11 @@ begin
   v_delivery_fee := v_settings.delivery_fee;
   v_total := v_subtotal + v_delivery_fee;
 
-  insert into public.orders (
-    id,
-    order_number,
-    customer_name,
+    insert into public.orders (
+      id,
+      user_id,
+      order_number,
+      customer_name,
     phone,
     email,
     address,
@@ -261,10 +387,11 @@ begin
     total,
     currency
   )
-  values (
-    v_order_id,
-    v_order_number,
-    trim(p_customer_name),
+    values (
+      v_order_id,
+      (select auth.uid()),
+      v_order_number,
+      trim(p_customer_name),
     trim(p_phone),
     nullif(trim(p_email), ''),
     trim(p_address),
@@ -326,6 +453,102 @@ $$;
 revoke all on function public.create_order(text, text, text, text, text, jsonb) from public;
 grant execute on function public.create_order(text, text, text, text, text, jsonb)
 to anon, authenticated;
+
+create or replace function public.get_account_overview()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  with current_user_account as (
+    select auth.uid() as user_id
+  ),
+  selected_profile as (
+    select profile.*
+    from public.account_profiles as profile
+    join current_user_account as account on account.user_id = profile.user_id
+  ),
+  selected_delivery as (
+    select preference.*
+    from public.delivery_preferences as preference
+    join current_user_account as account on account.user_id = preference.user_id
+  ),
+  selected_payment_methods as (
+    select coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', method.id,
+          'brand', method.brand,
+          'lastFour', method.last_four,
+          'expiryMonth', method.expiry_month,
+          'expiryYear', method.expiry_year,
+          'isDefault', method.is_default
+        )
+        order by method.is_default desc, method.created_at desc
+      ),
+      '[]'::jsonb
+    ) as payload
+    from public.payment_methods as method
+    join current_user_account as account on account.user_id = method.user_id
+  ),
+  selected_orders as (
+    select coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', placed.id,
+          'orderNumber', placed.order_number,
+          'placedAt', placed.created_at,
+          'status', placed.status,
+          'total', placed.total,
+          'currency', placed.currency,
+          'items', coalesce(items.payload, '[]'::jsonb)
+        )
+        order by placed.created_at desc
+      ),
+      '[]'::jsonb
+    ) as payload
+    from public.orders as placed
+    join current_user_account as account on account.user_id = placed.user_id
+    left join lateral (
+      select jsonb_agg(
+        jsonb_build_object(
+          'productId', item.product_id,
+          'productName', item.product_name,
+          'quantity', item.quantity,
+          'unit', item.unit
+        )
+        order by item.id
+      ) as payload
+      from public.order_items as item
+      where item.order_id = placed.id
+    ) as items on true
+  )
+  select jsonb_build_object(
+    'profile', jsonb_build_object(
+      'displayName', selected_profile.display_name,
+      'username', selected_profile.username,
+      'memberSince', to_char(selected_profile.created_at, 'YYYY')
+    ),
+    'deliveryPreference', case
+      when selected_delivery.user_id is null then null
+      else jsonb_build_object(
+        'defaultAddress', selected_delivery.default_address,
+        'preferredWindow', selected_delivery.preferred_window,
+        'deliveryInstructions', selected_delivery.delivery_instructions,
+        'substitutionPreference', selected_delivery.substitution_preference
+      )
+    end,
+    'paymentMethods', selected_payment_methods.payload,
+    'orders', selected_orders.payload
+  )
+  from selected_profile
+  left join selected_delivery on selected_delivery.user_id = selected_profile.user_id
+  cross join selected_payment_methods
+  cross join selected_orders;
+$$;
+
+revoke all on function public.get_account_overview() from public;
+grant execute on function public.get_account_overview() to authenticated;
 
 insert into public.categories (id, name, sort_order, active)
 values

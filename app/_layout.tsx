@@ -51,6 +51,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="products/[id]" />
             <Stack.Screen name="cart" />
+            <Stack.Screen name="account" />
             <Stack.Screen name="checkout" />
             <Stack.Screen name="order-confirmation" options={{ gestureEnabled: false }} />
           </Stack>

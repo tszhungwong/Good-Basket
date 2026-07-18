@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
@@ -28,6 +28,8 @@ import { FeaturedProduct } from '../components/FeaturedProduct';
 import { ProductCard } from '../components/ProductCard';
 import { SearchField } from '../components/SearchField';
 import { SortMenu } from '../components/SortMenu';
+
+const accountHref = '/account' as Href;
 
 export function StorefrontScreen() {
   const router = useRouter();
@@ -93,17 +95,24 @@ export function StorefrontScreen() {
               <Text style={styles.brandName}>Good Goods</Text>
             </View>
           </View>
-          <View style={styles.cartButtonWrap}>
+          <View style={styles.headerActions}>
+            <View style={styles.cartButtonWrap}>
+              <IconButton
+                accessibilityLabel={`Open cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+                icon="bag-outline"
+                onPress={() => router.push('/cart')}
+              />
+              {itemCount > 0 ? (
+                <View style={styles.cartCount}>
+                  <Text style={styles.cartCountText}>{itemCount > 99 ? '99+' : itemCount}</Text>
+                </View>
+              ) : null}
+            </View>
             <IconButton
-              accessibilityLabel={`Open cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
-              icon="bag-outline"
-              onPress={() => router.push('/cart')}
+              accessibilityLabel="Open account"
+              icon="person-outline"
+              onPress={() => router.push(accountHref)}
             />
-            {itemCount > 0 ? (
-              <View style={styles.cartCount}>
-                <Text style={styles.cartCountText}>{itemCount > 99 ? '99+' : itemCount}</Text>
-              </View>
-            ) : null}
           </View>
         </View>
         <SearchField onChange={setQuery} value={query} />
@@ -260,6 +269,10 @@ const styles = StyleSheet.create({
   },
   cartButtonWrap: {
     position: 'relative',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   cartCount: {
     position: 'absolute',
