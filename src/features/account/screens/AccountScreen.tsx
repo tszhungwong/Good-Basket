@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  BottomNavigationBar,
+  bottomNavigationHeight,
+} from '@/components/navigation/BottomNavigationBar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
@@ -115,6 +119,7 @@ export function AccountScreen({ repository }: AccountScreenProps) {
           message="Your saved checkout details and order history are being prepared."
           title="Loading account"
         />
+        <BottomNavigationBar activeItem="account" onShopPress={() => router.push('/')} />
       </SafeAreaView>
     );
   }
@@ -129,6 +134,7 @@ export function AccountScreen({ repository }: AccountScreenProps) {
           onRetry={retry}
           title="Could not load account"
         />
+        <BottomNavigationBar activeItem="account" onShopPress={() => router.push('/')} />
       </SafeAreaView>
     );
   }
@@ -299,6 +305,8 @@ export function AccountScreen({ repository }: AccountScreenProps) {
           </View>
         </View>
       </ScrollView>
+
+      <BottomNavigationBar activeItem="account" onShopPress={() => router.push('/')} />
     </SafeAreaView>
   );
 }
@@ -418,7 +426,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     gap: spacing.md,
     padding: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: bottomNavigationHeight + spacing.xl,
   },
   pageTitle: {
     color: colors.ink,

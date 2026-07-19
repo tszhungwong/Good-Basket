@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
@@ -11,6 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  BottomNavigationBar,
+  bottomNavigationHeight,
+} from '@/components/navigation/BottomNavigationBar';
 import { IconButton } from '@/components/ui/IconButton';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { useCart } from '@/features/cart/CartProvider';
@@ -28,8 +32,6 @@ import { FeaturedProduct } from '../components/FeaturedProduct';
 import { ProductCard } from '../components/ProductCard';
 import { SearchField } from '../components/SearchField';
 import { SortMenu } from '../components/SortMenu';
-
-const accountHref = '/account' as Href;
 
 export function StorefrontScreen() {
   const router = useRouter();
@@ -95,24 +97,17 @@ export function StorefrontScreen() {
               <Text style={styles.brandName}>Good Goods</Text>
             </View>
           </View>
-          <View style={styles.headerActions}>
-            <View style={styles.cartButtonWrap}>
-              <IconButton
-                accessibilityLabel={`Open cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
-                icon="bag-outline"
-                onPress={() => router.push('/cart')}
-              />
-              {itemCount > 0 ? (
-                <View style={styles.cartCount}>
-                  <Text style={styles.cartCountText}>{itemCount > 99 ? '99+' : itemCount}</Text>
-                </View>
-              ) : null}
-            </View>
+          <View style={styles.cartButtonWrap}>
             <IconButton
-              accessibilityLabel="Open account"
-              icon="person-outline"
-              onPress={() => router.push(accountHref)}
+              accessibilityLabel={`Open cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+              icon="bag-outline"
+              onPress={() => router.push('/cart')}
             />
+            {itemCount > 0 ? (
+              <View style={styles.cartCount}>
+                <Text style={styles.cartCountText}>{itemCount > 99 ? '99+' : itemCount}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
         <SearchField onChange={setQuery} value={query} />
@@ -212,6 +207,8 @@ export function StorefrontScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      <BottomNavigationBar activeItem="shop" onAccountPress={() => router.push('/account')} />
     </SafeAreaView>
   );
 }
@@ -270,10 +267,6 @@ const styles = StyleSheet.create({
   cartButtonWrap: {
     position: 'relative',
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
   cartCount: {
     position: 'absolute',
     top: -5,
@@ -294,10 +287,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingBottom: bottomNavigationHeight + spacing.xl,
   },
   scrollContentWithCart: {
-    paddingBottom: 112,
+    paddingBottom: bottomNavigationHeight + 112,
   },
   content: {
     width: '100%',
@@ -371,7 +364,7 @@ const styles = StyleSheet.create({
   cartBar: {
     position: 'absolute',
     right: 0,
-    bottom: 0,
+    bottom: bottomNavigationHeight,
     left: 0,
     borderTopWidth: 1,
     borderTopColor: colors.line,

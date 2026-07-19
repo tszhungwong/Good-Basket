@@ -55,7 +55,7 @@ test('searches the catalog and adds a visible product to cart', async () => {
   expect(screen.getByRole('button', { name: /View cart, 1 item/ })).toBeTruthy();
 });
 
-test('opens the account page from the storefront header', async () => {
+test('opens the account page from the bottom navigation', async () => {
   const repository: CatalogRepository = {
     getCatalog: jest.fn().mockResolvedValue({
       categories: catalogCategories,
@@ -78,7 +78,11 @@ test('opens the account page from the storefront header', async () => {
   );
 
   await screen.findByText('Good Goods');
-  fireEvent.press(screen.getByRole('button', { name: 'Open account' }));
+  expect(screen.queryByRole('button', { name: 'Open account' })).toBeNull();
+  expect(screen.getByText('Shop')).toBeTruthy();
+  expect(screen.getByText('You')).toBeTruthy();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Go to account' }));
 
   expect(mockRouter.push).toHaveBeenCalledWith('/account');
 });

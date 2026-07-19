@@ -122,3 +122,31 @@ test('adds a previous order back to the cart from history', async () => {
     expect(screen.getByRole('button', { name: /Open cart, 1 item/ })).toBeTruthy();
   });
 });
+
+test('shows account as the active bottom navigation item and returns to shop', async () => {
+  const repository: AccountRepository = {
+    getAccount: jest.fn().mockResolvedValue(accountData),
+  };
+  const screen = await renderAccount(repository);
+
+  expect(await screen.findByText('Personal information')).toBeTruthy();
+  expect(screen.getByText('Shop')).toBeTruthy();
+  expect(screen.getByText('You')).toBeTruthy();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Go to shop' }));
+
+  expect(mockRouter.push).toHaveBeenCalledWith('/');
+});
+
+test('keeps bottom navigation available when account details fail to load', async () => {
+  const repository: AccountRepository = {
+    getAccount: jest.fn().mockRejectedValue(new Error('Account requires sign in.')),
+  };
+  const screen = await renderAccount(repository);
+
+  expect(await screen.findByText('Could not load account')).toBeTruthy();
+
+  fireEvent.press(screen.getByRole('button', { name: 'Go to shop' }));
+
+  expect(mockRouter.push).toHaveBeenCalledWith('/');
+});
