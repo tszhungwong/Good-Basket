@@ -47,10 +47,14 @@ export function AccountScreen({ repository }: AccountScreenProps) {
   const { addProduct, itemCount } = useCart();
   const { data: catalog } = useCatalog();
   const [account, setAccount] = useState<AccountData | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestId, setRequestId] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
 
   const productById = useMemo(() => {
     const products = new Map<string, Product>();
@@ -111,6 +115,39 @@ export function AccountScreen({ repository }: AccountScreenProps) {
     }
   };
 
+  const signOut = async () => {
+    setActionError(null);
+    setSigningOut(true);
+    try {
+      await repositoryRef.current.signOut();
+      router.replace('/sign-in');
+    } catch (signOutError: unknown) {
+      setActionError(
+        signOutError instanceof Error
+          ? signOutError.message
+          : 'Could not sign out. Please try again.',
+      );
+      setSigningOut(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setActionError(null);
+    setDeletingAccount(true);
+    try {
+      await repositoryRef.current.requestAccountDeletion();
+      await repositoryRef.current.signOut();
+      router.replace('/sign-in');
+    } catch (deleteError: unknown) {
+      setActionError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'Could not delete your account. Please try again.',
+      );
+      setDeletingAccount(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -132,6 +169,8 @@ export function AccountScreen({ repository }: AccountScreenProps) {
           icon="person-circle-outline"
           message={error ?? 'Account details are unavailable.'}
           onRetry={retry}
+          onSecondaryAction={() => router.push('/sign-in')}
+          secondaryActionLabel="Sign in"
           title="Could not load account"
         />
         <BottomNavigationBar activeItem="account" onShopPress={() => router.push('/')} />
@@ -176,6 +215,7 @@ export function AccountScreen({ repository }: AccountScreenProps) {
             </View>
             <View style={styles.profileCopy}>
               <Text style={styles.profileName}>{account.profile.displayName}</Text>
+              <Text style={styles.profileEmail}>Signed in as {account.profile.email}</Text>
               <Text style={styles.profileMeta}>Member since {account.profile.memberSince}</Text>
             </View>
             <Ionicons color={colors.ink} name="chevron-forward" size={22} />
@@ -303,6 +343,62 @@ export function AccountScreen({ repository }: AccountScreenProps) {
               </View>
             ))}
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.sectionHeaderStatic}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.brandIcon}>
+                <Ionicons color={colors.onBrand} name="settings-outline" size={20} />
+              </View>
+              <Text style={styles.cardTitle}>Account access</Text>
+            </View>
+          </View>
+          {actionError ? <Text style={styles.actionError}>{actionError}</Text> : null}
+          {deleteConfirmOpen ? (
+            <View style={styles.deleteConfirm}>
+              <Text style={styles.deleteTitle}>Delete your account?</Text>
+              <Text style={styles.deleteCopy}>
+                This removes your login and saved account details. Previous orders stay in the
+                store records without your account attached.
+              </Text>
+              <View style={styles.actionRow}>
+                <Button
+                  disabled={deletingAccount}
+                  label="Cancel"
+                  onPress={() => setDeleteConfirmOpen(false)}
+                  variant="outline"
+                />
+                <Button
+                  accessibilityLabel="Confirm delete account"
+                  icon="trash-outline"
+                  label="Delete account"
+                  loading={deletingAccount}
+                  onPress={deleteAccount}
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.actionRow}>
+              <Button
+                icon="log-out-outline"
+                label="Sign out"
+                loading={signingOut}
+                onPress={signOut}
+                variant="outline"
+              />
+              <Button
+                disabled={signingOut}
+                icon="trash-outline"
+                label="Delete account"
+                onPress={() => {
+                  setActionError(null);
+                  setDeleteConfirmOpen(true);
+                }}
+                variant="ghost"
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -478,6 +574,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     lineHeight: typography.lineHeights.body,
   },
+  profileEmail: {
+    color: colors.brandPressed,
+    fontFamily: typography.fonts.bodyBold,
+    fontSize: typography.sizes.small,
+    lineHeight: typography.lineHeights.small,
+  },
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -559,6 +661,37 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: typography.fonts.body,
     fontSize: typography.sizes.small,
+  },
+  actionError: {
+    color: colors.danger,
+    fontFamily: typography.fonts.bodyBold,
+    fontSize: typography.sizes.small,
+    lineHeight: typography.lineHeights.small,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  deleteConfirm: {
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: layout.radius,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  deleteTitle: {
+    color: colors.ink,
+    fontFamily: typography.fonts.headingBold,
+    fontSize: typography.sizes.lead,
+    lineHeight: typography.lineHeights.lead,
+  },
+  deleteCopy: {
+    color: colors.muted,
+    fontFamily: typography.fonts.body,
+    fontSize: typography.sizes.small,
+    lineHeight: typography.lineHeights.small,
   },
   paymentList: {
     gap: spacing.sm,
