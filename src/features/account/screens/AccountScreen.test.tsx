@@ -28,6 +28,7 @@ const metrics = {
 const accountData: AccountData = {
   profile: {
     displayName: 'Jamie Chen',
+    email: 'jamie@example.com',
     memberSince: '2024',
     username: 'jamie.chen',
   },
@@ -94,11 +95,14 @@ function renderAccount(repository: AccountRepository) {
 test('renders account information with delivery preferences collapsed by default', async () => {
   const repository: AccountRepository = {
     getAccount: jest.fn().mockResolvedValue(accountData),
+    requestAccountDeletion: jest.fn(),
+    signOut: jest.fn(),
   };
   const screen = await renderAccount(repository);
 
   expect(await screen.findByText('Personal information')).toBeTruthy();
   expect(screen.getByText('Jamie Chen')).toBeTruthy();
+  expect(screen.getByText('Signed in as jamie@example.com')).toBeTruthy();
   expect(screen.getByText('jamie.chen')).toBeTruthy();
   expect(screen.getByText('••••••••')).toBeTruthy();
   expect(screen.getByText('Delivery preferences')).toBeTruthy();
@@ -112,6 +116,8 @@ test('renders account information with delivery preferences collapsed by default
 test('adds a previous order back to the cart from history', async () => {
   const repository: AccountRepository = {
     getAccount: jest.fn().mockResolvedValue(accountData),
+    requestAccountDeletion: jest.fn(),
+    signOut: jest.fn(),
   };
   const screen = await renderAccount(repository);
 
@@ -126,6 +132,8 @@ test('adds a previous order back to the cart from history', async () => {
 test('shows account as the active bottom navigation item and returns to shop', async () => {
   const repository: AccountRepository = {
     getAccount: jest.fn().mockResolvedValue(accountData),
+    requestAccountDeletion: jest.fn(),
+    signOut: jest.fn(),
   };
   const screen = await renderAccount(repository);
 
@@ -138,15 +146,57 @@ test('shows account as the active bottom navigation item and returns to shop', a
   expect(mockRouter.push).toHaveBeenCalledWith('/');
 });
 
-test('keeps bottom navigation available when account details fail to load', async () => {
+test('offers sign in and keeps navigation available when account details fail to load', async () => {
   const repository: AccountRepository = {
     getAccount: jest.fn().mockRejectedValue(new Error('Account requires sign in.')),
+    requestAccountDeletion: jest.fn(),
+    signOut: jest.fn(),
   };
   const screen = await renderAccount(repository);
 
   expect(await screen.findByText('Could not load account')).toBeTruthy();
 
-  fireEvent.press(screen.getByRole('button', { name: 'Go to shop' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+  expect(mockRouter.push).toHaveBeenCalledWith('/sign-in');
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Go to shop' }));
 
   expect(mockRouter.push).toHaveBeenCalledWith('/');
+});
+
+test('signs out from the account page and returns to sign in', async () => {
+  const repository: AccountRepository = {
+    getAccount: jest.fn().mockResolvedValue(accountData),
+    requestAccountDeletion: jest.fn(),
+    signOut: jest.fn().mockResolvedValue(undefined),
+  };
+  const screen = await renderAccount(repository);
+
+  expect(await screen.findByText('Personal information')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+
+  await waitFor(() => {
+    expect(repository.signOut).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/sign-in');
+  });
+});
+
+test('requests account deletion, signs out, and returns to sign in', async () => {
+  const repository: AccountRepository = {
+    getAccount: jest.fn().mockResolvedValue(accountData),
+    requestAccountDeletion: jest.fn().mockResolvedValue(undefined),
+    signOut: jest.fn().mockResolvedValue(undefined),
+  };
+  const screen = await renderAccount(repository);
+
+  expect(await screen.findByText('Personal information')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Delete account' }));
+  expect(await screen.findByText('Delete your account?')).toBeTruthy();
+  fireEvent.press(screen.getByRole('button', { name: 'Confirm delete account' }));
+
+  await waitFor(() => {
+    expect(repository.requestAccountDeletion).toHaveBeenCalledTimes(1);
+    expect(repository.signOut).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/sign-in');
+  });
 });

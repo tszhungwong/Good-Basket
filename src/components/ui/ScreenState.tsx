@@ -13,6 +13,8 @@ export type ScreenStateProps = {
   icon: ComponentProps<typeof Ionicons>['name'];
   message: string;
   onRetry?: () => void;
+  onSecondaryAction?: () => void;
+  secondaryActionLabel?: string;
   title: string;
 };
 
@@ -21,6 +23,8 @@ export function ScreenState({
   icon,
   message,
   onRetry,
+  onSecondaryAction,
+  secondaryActionLabel,
   title,
 }: ScreenStateProps) {
   return (
@@ -30,7 +34,14 @@ export function ScreenState({
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      {onRetry ? <Button label={actionLabel} onPress={onRetry} variant="outline" /> : null}
+      {onRetry || (onSecondaryAction && secondaryActionLabel) ? (
+        <View style={styles.actions}>
+          {onRetry ? <Button label={actionLabel} onPress={onRetry} variant="outline" /> : null}
+          {onSecondaryAction && secondaryActionLabel ? (
+            <Button label={secondaryActionLabel} onPress={onSecondaryAction} />
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -64,5 +75,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.body,
     lineHeight: typography.lineHeights.body,
     textAlign: 'center',
+  },
+  actions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
   },
 });

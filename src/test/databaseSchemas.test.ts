@@ -28,6 +28,8 @@ test('focused schema contains the catalog, order, security, and RPC contracts', 
   expect(schema).toContain('enable row level security');
   expect(schema).toContain('grant execute on function public.create_order');
   expect(schema).toContain('grant execute on function public.get_account_overview');
+  expect(schema).toContain('create or replace function public.delete_current_user');
+  expect(schema).toContain('grant execute on function public.delete_current_user() to authenticated');
   expect(schema.match(/on conflict \(id\) do update/g)).toHaveLength(3);
   expect(schema).not.toContain('stock = excluded.stock');
   expect(schema).toContain(`'${catalogSettings.currency.toLocaleLowerCase()}'`);
@@ -50,4 +52,20 @@ test('schema files contain no unfinished implementation markers', () => {
   const combined = readSchema('schema.sql');
 
   expect(combined).not.toMatch(/\btodo\b|\btbd\b|implement later|placeholder/);
+});
+
+test('schema creates an account profile for each Supabase Auth user', () => {
+  const schema = readSchema('schema.sql');
+
+  expect(schema).toContain('create schema if not exists private');
+  expect(schema).toContain('create or replace function private.handle_new_auth_user()');
+  expect(schema).toContain("set search_path = ''");
+  expect(schema).toContain('after insert on auth.users');
+  expect(schema).toContain('execute function private.handle_new_auth_user()');
+  expect(schema).toContain(
+    'revoke all on function private.handle_new_auth_user() from public, anon, authenticated',
+  );
+  expect(schema).toContain('insert into public.account_profiles');
+  expect(schema).toContain('from auth.users as existing_user');
+  expect(schema).toContain('on conflict (user_id) do nothing');
 });

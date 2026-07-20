@@ -32,3 +32,24 @@ test('supports a context-specific recovery label', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Start shopping' }));
   expect(onAction).toHaveBeenCalledTimes(1);
 });
+
+test('supports a secondary recovery action', async () => {
+  const onRetry = jest.fn();
+  const onSignIn = jest.fn();
+  const screen = await render(
+    <ScreenState
+      icon="person-circle-outline"
+      message="Sign in to load your account."
+      onRetry={onRetry}
+      onSecondaryAction={onSignIn}
+      secondaryActionLabel="Sign in"
+      title="Could not load account"
+    />,
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+
+  expect(onRetry).toHaveBeenCalledTimes(1);
+  expect(onSignIn).toHaveBeenCalledTimes(1);
+});

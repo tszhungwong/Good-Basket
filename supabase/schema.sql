@@ -3,6 +3,9 @@
 
 create extension if not exists pgcrypto;
 
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
 do $$
 begin
   create type public.order_status as enum (
@@ -64,6 +67,54 @@ create table if not exists public.account_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create or replace function private.handle_new_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_email_name text := split_part(coalesce(new.email, ''), '@', 1);
+  v_display_name text := coalesce(
+    nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+    nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+    nullif(initcap(replace(replace(v_email_name, '.', ' '), '_', ' ')), ''),
+    'Good Goods shopper'
+  );
+  v_username_base text := lower(
+    regexp_replace(
+      coalesce(
+        nullif(trim(new.raw_user_meta_data ->> 'username'), ''),
+        nullif(v_email_name, ''),
+        'shopper'
+      ),
+      '[^a-zA-Z0-9_]+',
+      '',
+      'g'
+    )
+  );
+begin
+  insert into public.account_profiles (user_id, display_name, username)
+  values (
+    new.id,
+    left(v_display_name, 80),
+    left(coalesce(nullif(v_username_base, ''), 'shopper'), 40)
+      || '_'
+      || left(replace(new.id::text, '-', ''), 8)
+  )
+  on conflict (user_id) do nothing;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.handle_new_auth_user() from public, anon, authenticated;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function private.handle_new_auth_user();
 
 create table if not exists public.delivery_preferences (
   user_id uuid primary key references public.account_profiles(user_id) on delete cascade,
@@ -550,6 +601,27 @@ $$;
 revoke all on function public.get_account_overview() from public;
 grant execute on function public.get_account_overview() to authenticated;
 
+create or replace function public.delete_current_user()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'Sign in is required to delete an account.' using errcode = '28000';
+  end if;
+
+  delete from auth.users as auth_user
+  where auth_user.id = v_user_id;
+end;
+$$;
+
+revoke all on function public.delete_current_user() from public, anon, authenticated;
+grant execute on function public.delete_current_user() to authenticated;
+
 insert into public.categories (id, name, sort_order, active)
 values
   ('10000000-0000-4000-8000-000000000001', 'Fresh', 1, true),
@@ -746,3 +818,49 @@ set
   badge = excluded.badge,
   featured = excluded.featured,
   active = excluded.active;
+
+-- Backfill related profile data for Auth users created before this trigger existed.
+insert into public.account_profiles (user_id, display_name, username)
+select
+  existing_user.id,
+  left(
+    coalesce(
+      nullif(trim(existing_user.raw_user_meta_data ->> 'full_name'), ''),
+      nullif(trim(existing_user.raw_user_meta_data ->> 'name'), ''),
+      nullif(
+        initcap(
+          replace(
+            replace(split_part(coalesce(existing_user.email, ''), '@', 1), '.', ' '),
+            '_',
+            ' '
+          )
+        ),
+        ''
+      ),
+      'Good Goods shopper'
+    ),
+    80
+  ),
+  left(
+    coalesce(
+      nullif(
+        lower(
+          regexp_replace(
+            coalesce(
+              nullif(trim(existing_user.raw_user_meta_data ->> 'username'), ''),
+              nullif(split_part(coalesce(existing_user.email, ''), '@', 1), ''),
+              'shopper'
+            ),
+            '[^a-zA-Z0-9_]+',
+            '',
+            'g'
+          )
+        ),
+        ''
+      ),
+      'shopper'
+    ),
+    40
+  ) || '_' || left(replace(existing_user.id::text, '-', ''), 8)
+from auth.users as existing_user
+on conflict (user_id) do nothing;

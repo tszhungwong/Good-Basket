@@ -1,9 +1,8 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 import { getSupabaseClient } from '@/lib/supabase';
 
 export type AccountProfile = {
   displayName: string;
+  email: string;
   memberSince: string;
   username: string;
 };
@@ -50,7 +49,43 @@ export type AccountData = {
 
 export interface AccountRepository {
   getAccount(): Promise<AccountData>;
+  requestAccountDeletion(): Promise<void>;
+  signOut(): Promise<void>;
 }
+
+type AccountUser = {
+  email?: string;
+  id: string;
+  user_metadata: Record<string, unknown>;
+};
+
+type AccountProfileInsert = {
+  display_name: string;
+  user_id: string;
+  username: string;
+};
+
+type QueryResult = {
+  data: unknown;
+  error: Error | null;
+};
+
+export type AccountClient = {
+  auth: {
+    getUser(): Promise<{
+      data: { user: AccountUser | null };
+      error: Error | null;
+    }>;
+    signOut(input: { scope: 'local' }): Promise<{ error: Error | null }>;
+  };
+  from(table: 'account_profiles'): {
+    upsert(
+      values: AccountProfileInsert,
+      options: { ignoreDuplicates: true; onConflict: 'user_id' },
+    ): PromiseLike<QueryResult>;
+  };
+  rpc(name: 'delete_current_user' | 'get_account_overview'): PromiseLike<QueryResult>;
+};
 
 type AccountOverviewRow = {
   profile?: Partial<AccountProfile>;
@@ -59,7 +94,7 @@ type AccountOverviewRow = {
   orders?: (Partial<AccountOrder> & { items?: Partial<AccountOrderItem>[] })[];
 };
 
-function parseAccountOverview(value: unknown): AccountData {
+function parseAccountOverview(value: unknown, email: string): AccountData {
   const overview = value as AccountOverviewRow | null;
   if (!overview?.profile?.displayName || !overview.profile.username) {
     throw new Error('Your account profile is not ready yet.');
@@ -68,6 +103,7 @@ function parseAccountOverview(value: unknown): AccountData {
   return {
     profile: {
       displayName: overview.profile.displayName,
+      email,
       memberSince: overview.profile.memberSince ?? '',
       username: overview.profile.username,
     },
@@ -105,8 +141,44 @@ function parseAccountOverview(value: unknown): AccountData {
   };
 }
 
+function hasAccountProfile(value: unknown): boolean {
+  const overview = value as AccountOverviewRow | null;
+  return Boolean(overview?.profile?.displayName && overview.profile.username);
+}
+
+function metadataText(metadata: Record<string, unknown>, key: string): string {
+  const value = metadata[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function createProfileInsert(user: AccountUser): AccountProfileInsert {
+  const emailName = user.email?.split('@')[0] ?? '';
+  const emailDisplayName = emailName
+    .replace(/[._]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .trim();
+  const displayName =
+    metadataText(user.user_metadata, 'full_name') ||
+    metadataText(user.user_metadata, 'name') ||
+    emailDisplayName ||
+    'Good Goods shopper';
+  const usernameBase = (
+    metadataText(user.user_metadata, 'username') ||
+    emailName ||
+    'shopper'
+  )
+    .replace(/[^a-zA-Z0-9_]+/g, '')
+    .toLowerCase();
+
+  return {
+    display_name: displayName.slice(0, 80),
+    user_id: user.id,
+    username: `${(usernameBase || 'shopper').slice(0, 40)}_${user.id.replace(/-/g, '').slice(0, 8)}`,
+  };
+}
+
 export function createAccountRepository(
-  client: SupabaseClient | null = getSupabaseClient(),
+  client: AccountClient | null = getSupabaseClient() as unknown as AccountClient | null,
 ): AccountRepository {
   return {
     getAccount: async () => {
@@ -114,15 +186,65 @@ export function createAccountRepository(
         throw new Error('Supabase is not configured.');
       }
 
-      const { data, error } = await client.rpc('get_account_overview');
+      const { data: authData, error: authError } = await client.auth.getUser();
+      if (authError || !authData.user) {
+        throw new Error('Could not load your account. Please sign in and try again.', {
+          cause: authError ?? undefined,
+        });
+      }
+
+      const user = authData.user;
+      let { data, error } = await client.rpc('get_account_overview');
       if (error) {
         throw new Error('Could not load your account. Please sign in and try again.', {
           cause: error,
         });
       }
 
-      return parseAccountOverview(data);
+      if (!hasAccountProfile(data)) {
+        const { error: profileError } = await client
+          .from('account_profiles')
+          .upsert(createProfileInsert(user), {
+            ignoreDuplicates: true,
+            onConflict: 'user_id',
+          });
+        if (profileError) {
+          throw new Error('Could not prepare your account profile. Please try again.', {
+            cause: profileError,
+          });
+        }
+
+        ({ data, error } = await client.rpc('get_account_overview'));
+        if (error) {
+          throw new Error('Could not load your account. Please try again.', { cause: error });
+        }
+      }
+
+      const account = parseAccountOverview(data, user.email ?? '');
+      if (!account.profile.email) {
+        account.profile.email = account.profile.username;
+      }
+      return account;
+    },
+    requestAccountDeletion: async () => {
+      if (!client) {
+        throw new Error('Supabase is not configured.');
+      }
+
+      const { error } = await client.rpc('delete_current_user');
+      if (error) {
+        throw new Error('Could not delete your account. Please try again.', { cause: error });
+      }
+    },
+    signOut: async () => {
+      if (!client) {
+        throw new Error('Supabase is not configured.');
+      }
+
+      const { error } = await client.auth.signOut({ scope: 'local' });
+      if (error) {
+        throw new Error('Could not sign out. Please try again.', { cause: error });
+      }
     },
   };
 }
-
